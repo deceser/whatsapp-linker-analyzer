@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Linker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #25D366;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="tel"]:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #25D366;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #128C7E;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1976d2;
+        }
+        .status.success {
+            background-color: #e8f5e8;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+        .status.error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+        .code-display {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: none;
+        }
+        .instructions {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        .analysis-results {
+            background-color: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .analysis-results h3 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+        .analysis-results code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 WhatsApp Linker</h1>
+        
+        <form id="linkForm">
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number (with country code):</label>
+                <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    placeholder="e.g., +1234567890" 
+                    required
+                    pattern="^\+[1-9]\d{1,14}$"
+                >
+            </div>
+            
+            <button type="submit" id="linkButton">
+                🔗 Link WhatsApp
+            </button>
+        </form>
+        
+        <div id="status" class="status"></div>
+        
+        <div id="codeDisplay" class="code-display">
+            <div>Your Linking Code:</div>
+            <div id="linkingCode"></div>
+        </div>
+        
+        <div id="instructions" class="instructions">
+            <h3>📱 Next Steps:</h3>
+            <ol>
+                <li>Open WhatsApp on your phone</li>
+                <li>Go to Settings > Linked Devices</li>
+                <li>Tap "Link a Device"</li>
+                <li>Enter the code shown above</li>
+                <li>Wait for the linking to complete</li>
+            </ol>
+        </div>
+        
+        <div id="analysisResults" class="analysis-results" style="display: none;">
+            <h3>📊 Analysis Results:</h3>
+            <div id="analysisStats"></div>
+            <p><strong>📁 Data saved to:</strong> <code>data/whatsapp-analysis-[phone]-[timestamp].json</code></p>
+            <p><strong>📄 Human-readable report:</strong> <code>data/whatsapp-analysis-[phone]-[timestamp].txt</code></p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('linkForm');
+        const phoneInput = document.getElementById('phoneNumber');
+        const linkButton = document.getElementById('linkButton');
+        const status = document.getElementById('status');
+        const codeDisplay = document.getElementById('codeDisplay');
+        const linkingCode = document.getElementById('linkingCode');
+        const instructions = document.getElementById('instructions');
+        const analysisResults = document.getElementById('analysisResults');
+        const analysisStats = document.getElementById('analysisStats');
+
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        function showCode(code) {
+            linkingCode.textContent = code;
+            codeDisplay.style.display = 'block';
+            instructions.style.display = 'block';
+        }
+
+        function hideCode() {
+            codeDisplay.style.display = 'none';
+            instructions.style.display = 'none';
+        }
+
+        function showAnalysisResults(analysis) {
+            analysisStats.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 10px 0;">
+                    <div><strong>Total Messages:</strong> ${analysis.totalMessages.toLocaleString()}</div>
+                    <div><strong>Total Chats:</strong> ${analysis.totalChats}</div>
+                    <div><strong>Total Groups:</strong> ${analysis.totalGroups}</div>
+                    <div><strong>Total Contacts:</strong> ${analysis.totalContacts}</div>
+                </div>
+            `;
+            analysisResults.style.display = 'block';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const phoneNumber = phoneInput.value.trim();
+            
+            if (!phoneNumber) {
+                showStatus('Please enter a phone number', 'error');
+                return;
+            }
+
+            // Validate phone number format
+            if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) {
+                showStatus('Please enter a valid phone number with country code (e.g., +1234567890)', 'error');
+                return;
+            }
+
+            // Disable form and show loading
+            linkButton.disabled = true;
+            linkButton.textContent = '🔄 Linking...';
+            hideStatus();
+            hideCode();
+
+            try {
+                showStatus('Starting WhatsApp linking process...', 'info');
+                
+                const response = await fetch('/api/link-whatsapp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phoneNumber })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(result.message || 'WhatsApp linking successful! Data has been captured and saved.', 'success');
+                    if (result.linkingCode) {
+                        showCode(result.linkingCode);
+                    }
+                    if (result.analysis) {
+                        showAnalysisResults(result.analysis);
+                    }
+                } else {
+                    showStatus('Failed to link WhatsApp. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('An error occurred. Please try again.', 'error');
+            } finally {
+                // Re-enable form
+                linkButton.disabled = false;
+                linkButton.textContent = '🔗 Link WhatsApp';
+            }
+        });
+
+        // Real-time status updates (if needed)
+        const eventSource = new EventSource('/api/status');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.status === 'connected') {
+                console.log('Connected to status updates');
+            }
+        };
+    </script>
+</body>
+</html>
